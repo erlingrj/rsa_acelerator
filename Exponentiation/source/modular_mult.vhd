@@ -41,7 +41,7 @@ architecture rtl of modular_mult is
     TYPE State_type is (S_IDLE, S_PROC, S_DONE);
     signal state: State_type;
 
-    signal cntr : integer range 0 to block_size - 1 := 0;
+    signal cntr : integer range 0 to block_size - 1 := block_size;
     -- n,A,B are regs storing the inputs
     signal n	: STD_LOGIC_VECTOR (block_size-1 downto 0); -- n is the mod
     signal  A   : std_logic_vector(block_size-1 downto 0);
@@ -63,6 +63,16 @@ begin
 
     -- Connect some internal signals to external
     P_out <= P;
+    ready_out <= '1' when (state = S_IDLE and reset_n = '1') else '0';
+    valid_out <= '1' when (state = S_DONE and reset_n = '1') else '0';
+
+    -- Specify the combinatorial stuff
+    P_or_zero <= (others => '0') when cntr = (block_size - 1) else P;
+    A_or_zero <= (others => '0') when B(cntr) = '0' else A;
+    A_plus_P <=  (P_or_zero(block_size-2 downto 0) & '0') +  A_or_zero;
+    res <= A_plus_P;
+    res_minus_n <= A_plus_P - n;
+    res_minus_2n <= A_plus_P - (n(block_size-2 downto 0) & '0');    
 
 
     main : process(clk, reset_n) begin
@@ -72,43 +82,49 @@ begin
             A <= (others => '0');
             B <= (others => '0');
             P <= (others => '0');
-            valid_out <= '0';
+            -- valid_out <= '0';
+            -- ready_out <= '0';
+
+            -- A_or_zero <= (others => '0');
+            -- P_or_zero <= (others => '0');
+            -- A_plus_P <= (others => '0');
+            -- res <= (others => '0');
+            -- res_minus_2n <= (others => '0');
+            -- res_minus_n <= (others => '0');
+
         elsif (rising_edge(clk)) then
             case state is
                 when S_IDLE =>
-                    valid_out <= '0';
                     if (valid_in = '1') then
                         n <= n_in;
                         A <= A_in;                
                         B <= B_in;
-                        ready_out <= '1';
                         state <= S_PROC;
-                        cntr <= 0;
+                        cntr <= block_size - 1;
                     else
-                        ready_out <= '0';
                         n <= (others => '0');
                         A <= (others => '0');
                         B <= (others => '0');
                     end if;
                 when S_PROC =>
                 
-                    if (cntr = 0) then
-                        P_or_zero <= (others => '0');
-                    else
-                        P_or_zero <= P;
-                    end if;
+                    -- if (cntr = 0) then
+                    --     P_or_zero <= (others => '0');
+                    -- else
+                    --     P_or_zero <= P;
+                    -- end if;
                     
-                    if (B(cntr) = '1') then
-                        A_or_zero <= A;
-                    else
-                        A_or_zero <= (others => '0');
-                    end if;
+                    -- if (B(cntr) = '1') then
+                    --     A_or_zero <= A;
+                    -- else
+                    --     A_or_zero <= (others => '0');
+                    -- end if;
                     
-                    A_plus_P <=  (P_or_zero(block_size-2 downto 0) & '0') +  A_or_zero;
+                    -- A_plus_P <=  (P_or_zero(block_size-2 downto 0) & '0') +  A_or_zero;
 
-                    res <= A_plus_P;
-                    res_minus_n <= A_plus_P - n;
-                    res_minus_2n <= A_plus_P - (n(block_size-2 downto 0) & '0');
+                    -- res <= A_plus_P;
+                    -- res_minus_n <= A_plus_P - n;
+                    -- res_minus_2n <= A_plus_P - (n(block_size-2 downto 0) & '0');
                     
                     -- Update P for the next cc
                     if (res_minus_n(block_size-1) = '1') then
@@ -120,19 +136,17 @@ begin
                     end if;
                     
                     -- Update cntr and possibly state
-                    if (cntr = (block_size - 1)) then
+                    if (cntr = 0) then
                         state <= S_DONE;
-                        cntr <= 0;
                     else
-                        cntr <= cntr + 1;
+                        cntr <= cntr - 1;
                         state <= S_PROC;    
                     end if;
 
                 when S_DONE =>
-                    valid_out <= '1';
                     if (ready_in <= '1') then
                         state <= S_IDLE;
-                        cntr <= 0;
+                        cntr <= block_size - 10;
                     end if; 
             end case;
         end if;

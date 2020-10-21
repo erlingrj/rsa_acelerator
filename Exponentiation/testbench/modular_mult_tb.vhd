@@ -1,6 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
-
+use ieee.numeric_std.all;
 
 entity modular_mult_tb is
 	generic (
@@ -80,4 +80,22 @@ begin
         wait;
     end process;
 
+
+    main_tb : process
+    begin
+        wait for RESET_TIME*2;
+        -- Send A = 115792089237316195423570985008687901296399, B = 1089237315423570985000785326998466564056574007929639936, n = 2357098500868790785326998466564056403945758400791312963993634
+        -- Expected result: 17701029
+        
+        t_A_in <= std_logic_vector(to_unsigned(8923731,block_size));
+        t_B_in <= std_logic_vector(to_unsigned(850089,block_size));
+        t_n_in <= std_logic_vector(to_unsigned(73154235,block_size));
+
+
+
+        wait for CLK_PERIOD;
+        t_valid_in <= '1';
+        t_ready_in <= '1';
+        wait;
+   end process;
 end tb;
