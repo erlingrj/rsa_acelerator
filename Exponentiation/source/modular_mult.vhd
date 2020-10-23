@@ -41,7 +41,7 @@ architecture rtl of modular_mult is
     TYPE State_type is (S_IDLE, S_PROC, S_DONE);
     signal state: State_type;
 
-    signal cntr : integer range 0 to block_size - 1 := block_size;
+    signal cntr : integer range 0 to block_size - 1 := block_size - 1;
     -- n,A,B are regs storing the inputs
     signal n	: STD_LOGIC_VECTOR (block_size-1 downto 0); -- n is the mod
     signal  A   : std_logic_vector(block_size-1 downto 0);
@@ -56,8 +56,8 @@ architecture rtl of modular_mult is
     signal A_plus_P  : std_logic_vector(block_size-1 downto 0);
 
     signal res : std_logic_vector(block_size-1 downto 0);
-    signal res_minus_n : std_logic_vector(block_size-1 downto 0);
-    signal res_minus_2n : std_logic_vector(block_size-1 downto 0);
+    signal res_minus_n : std_logic_vector(block_size downto 0);
+    signal res_minus_2n : std_logic_vector(block_size downto 0);
 
 begin
 
@@ -71,8 +71,8 @@ begin
     A_or_zero <= (others => '0') when B(cntr) = '0' else A;
     A_plus_P <=  (P_or_zero(block_size-2 downto 0) & '0') +  A_or_zero;
     res <= A_plus_P;
-    res_minus_n <= A_plus_P - n;
-    res_minus_2n <= A_plus_P - (n(block_size-2 downto 0) & '0');    
+    res_minus_n <= '0' & A_plus_P - ('0' & n); -- mak sure n is positive
+    res_minus_2n <= ('0' & A_plus_P) - ('0' & (n(block_size-2 downto 0) & '0')); --sign extend n   
 
 
     main : process(clk, reset_n) begin
@@ -127,12 +127,12 @@ begin
                     -- res_minus_2n <= A_plus_P - (n(block_size-2 downto 0) & '0');
                     
                     -- Update P for the next cc
-                    if (res_minus_n(block_size-1) = '1') then
+                    if (res_minus_n(block_size) = '1') then
                         P <= res;
-                    elsif (res_minus_2n(block_size-1) = '1') then
-                        P <= res_minus_n;
+                    elsif (res_minus_2n(block_size) = '1') then
+                        P <= res_minus_n(block_size-1 downto 0);
                     else
-                        P <= res_minus_2n;
+                        P <= res_minus_2n(block_size-1 downto 0);
                     end if;
                     
                     -- Update cntr and possibly state
